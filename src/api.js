@@ -1,5 +1,5 @@
 // Dán endpoint của project MockAPI vào đây (không kèm tên resource).
-export const API_URL = 'https://6afecb313a0e70bc8d53f856.mockapi.io/api/v1';
+export const API_URL = 'https://6afecb313a0e70bc8d53f855.mockapi.io';
 
 const VIDEOS = `${API_URL}/youtube2`;
 
@@ -8,7 +8,6 @@ async function request(url, options) {
     headers: { 'Content-Type': 'application/json' },
     ...options
   });
-  if (res.status === 404) return null;
   if (!res.ok) throw new Error(`MockAPI lỗi ${res.status}`);
   return res.json();
 }
