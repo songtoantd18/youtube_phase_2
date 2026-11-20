@@ -28,8 +28,9 @@ import {
   Download,
   Upload,
   Trash2,
+  Copy,
 } from "lucide-react";
-import { getVideos, saveVideos } from "./api";
+import { getVideos, saveVideos, findDuplicates, deleteRecords } from "./api";
 import "./style.css";
 
 function getVideoId(value) {
@@ -634,6 +635,72 @@ ${err.message}`),
     restoreInputRef.current?.click();
   };
 
+  const checkDuplicates = async () => {
+    setIsSyncing(true);
+    setSyncProgress({ done: 0, total: 0, label: "Đang kiểm tra video trùng" });
+
+    let duplicates;
+    try {
+      duplicates = await findDuplicates();
+    } catch (err) {
+      window.alert(`Không thể kiểm tra dữ liệu trên MockAPI.\n${err.message}`);
+      setIsSyncing(false);
+      return;
+    }
+    setIsSyncing(false);
+
+    if (!duplicates.length) {
+      window.alert("Không có video nào bị trùng ID.");
+      return;
+    }
+
+    const extras = duplicates.flatMap((d) => d.extras);
+    const preview = duplicates
+      .slice(0, 8)
+      .map(
+        (d) =>
+          `• ${d.title || d.videoId} (${d.videoId}) - trùng ${d.extras.length + 1} lần`,
+      )
+      .join("\n");
+    const more =
+      duplicates.length > 8
+        ? `\n... và ${duplicates.length - 8} video khác`
+        : "";
+
+    const ok = window.confirm(
+      `Tìm thấy ${duplicates.length} video bị trùng ID (${extras.length} bản ghi thừa):\n\n${preview}${more}\n\n` +
+        `Xóa ${extras.length} bản ghi thừa trên MockAPI (giữ lại 1 bản cho mỗi video)?`,
+    );
+    if (!ok) return;
+
+    setIsSyncing(true);
+    setSyncProgress({
+      done: 0,
+      total: extras.length,
+      label: "Đang xóa video trùng",
+    });
+    try {
+      await deleteRecords(extras, (done, total) =>
+        setSyncProgress({ done, total, label: "Đang xóa video trùng" }),
+      );
+    } catch (err) {
+      window.alert(`Không thể xóa video trùng.\n${err.message}`);
+      return;
+    } finally {
+      setIsSyncing(false);
+    }
+
+    const seen = new Set();
+    const unique = videosRef.current.filter((v) => {
+      if (seen.has(v.id)) return false;
+      seen.add(v.id);
+      return true;
+    });
+    videosRef.current = unique;
+    setVideos(unique);
+    window.alert(`Đã xóa ${extras.length} bản ghi trùng trên MockAPI.`);
+  };
+
   const deleteAllVideos = async () => {
     if (!videosRef.current.length) {
       window.alert("Danh sách video đang trống.");
@@ -848,6 +915,16 @@ ${err.message}`),
           >
             <Upload />
             <span>{isSyncing ? "Đang lưu..." : "Restore"}</span>
+          </button>
+
+          <button
+            className="header-tool"
+            onClick={checkDuplicates}
+            disabled={isSyncing}
+            title="Kiểm tra video trùng ID"
+          >
+            <Copy />
+            <span>Duplicate Check</span>
           </button>
 
           {/* <button

@@ -25,6 +25,34 @@ export async function getVideos() {
   }));
 }
 
+// Tìm các videoId xuất hiện nhiều lần trên API; giữ bản ghi cũ nhất, các bản còn lại là "extras".
+export async function findDuplicates() {
+  const records = await fetchRecords();
+  const groups = new Map();
+
+  for (const r of records) {
+    if (!groups.has(r.videoId)) groups.set(r.videoId, []);
+    groups.get(r.videoId).push(r);
+  }
+
+  return [...groups.entries()]
+    .filter(([, list]) => list.length > 1)
+    .map(([videoId, list]) => {
+      const sorted = [...list].sort((a, b) => Number(a.id) - Number(b.id));
+      return { videoId, title: sorted[0].title, keep: sorted[0], extras: sorted.slice(1) };
+    });
+}
+
+export async function deleteRecords(records, onProgress) {
+  let done = 0;
+  onProgress?.(0, records.length);
+  for (const r of records) {
+    await request(`${VIDEOS}/${r.id}`, { method: 'DELETE' });
+    done += 1;
+    onProgress?.(done, records.length);
+  }
+}
+
 // Đồng bộ danh sách hiện tại lên MockAPI: xóa bản ghi thừa, thêm mới, cập nhật tiêu đề đổi.
 export async function saveVideos(list, onProgress) {
   const records = await fetchRecords();
