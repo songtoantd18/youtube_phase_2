@@ -1,13 +1,36 @@
-import React, { useEffect, useMemo, useState, useRef } from 'react';
-import { createRoot } from 'react-dom/client';
+import React, { useEffect, useMemo, useState, useRef } from "react";
+import { createRoot } from "react-dom/client";
 import {
-  Menu, Search, Mic, Plus, Video, Bell, House, Compass, Tv,
-  Clapperboard, Music2, Library, Clock3, ThumbsUp, History,
-  ListVideo, X, Play, Pause, Volume2, VolumeX, Maximize,
-  MoreVertical, Repeat, Download, Upload
-} from 'lucide-react';
-import { getVideos, saveVideos } from './api';
-import './style.css';
+  Menu,
+  Search,
+  Mic,
+  Plus,
+  Video,
+  Bell,
+  House,
+  Compass,
+  Tv,
+  Clapperboard,
+  Music2,
+  Library,
+  Clock3,
+  ThumbsUp,
+  History,
+  ListVideo,
+  X,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Maximize,
+  MoreVertical,
+  Repeat,
+  Download,
+  Upload,
+  Trash2,
+} from "lucide-react";
+import { getVideos, saveVideos } from "./api";
+import "./style.css";
 
 function getVideoId(value) {
   if (!value) return null;
@@ -17,20 +40,18 @@ function getVideoId(value) {
   try {
     const u = new URL(text);
 
-    if (u.hostname.includes('youtu.be'))
-      return u.pathname.slice(1).split('/')[0];
+    if (u.hostname.includes("youtu.be"))
+      return u.pathname.slice(1).split("/")[0];
 
     if (
-      u.hostname.includes('youtube.com') ||
-      u.hostname.includes('youtube-nocookie.com')
+      u.hostname.includes("youtube.com") ||
+      u.hostname.includes("youtube-nocookie.com")
     ) {
-      if (u.pathname === '/watch')
-        return u.searchParams.get('v');
+      if (u.pathname === "/watch") return u.searchParams.get("v");
 
-      const parts = u.pathname.split('/').filter(Boolean);
+      const parts = u.pathname.split("/").filter(Boolean);
 
-      if (['embed', 'shorts', 'live'].includes(parts[0]))
-        return parts[1];
+      if (["embed", "shorts", "live"].includes(parts[0])) return parts[1];
     }
   } catch {}
 
@@ -40,7 +61,9 @@ function getVideoId(value) {
 // Hàm lấy tiêu đề YouTube thực tế qua oEmbed API công khai
 async function fetchYouTubeTitle(id) {
   try {
-    const res = await fetch(`https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`);
+    const res = await fetch(
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${id}&format=json`,
+    );
     if (res.ok) {
       const data = await res.json();
       if (data && data.title) {
@@ -54,13 +77,13 @@ async function fetchYouTubeTitle(id) {
 function createBackupPayload(videoList) {
   return JSON.stringify(
     {
-      app: 'YouTube Peach Clone',
+      app: "YouTube Peach Clone",
       version: 1,
       exportedAt: new Date().toISOString(),
-      videos: videoList
+      videos: videoList,
     },
     null,
-    2
+    2,
   );
 }
 
@@ -72,31 +95,33 @@ function App() {
     getVideos()
       .then((val) => {
         const list = val
-          .map(v => ({
+          .map((v) => ({
             id: v.id,
             title: v.title || `Video YouTube · ${v.id}`,
-            added: v.added
+            added: v.added,
           }))
           .sort((a, b) => b.added - a.added);
         videosRef.current = list;
         setVideos(list);
       })
-      .catch(err => window.alert(`Không tải được dữ liệu.
-${err.message}`));
+      .catch((err) =>
+        window.alert(`Không tải được dữ liệu.
+${err.message}`),
+      );
   }, []);
 
   const persist = (list) => {
-    saveVideos(list).catch(err =>
+    saveVideos(list).catch((err) =>
       window.alert(`Không thể lưu lên MockAPI.
-${err.message}`)
+${err.message}`),
     );
   };
 
   const [active, setActive] = useState(null);
   const [modal, setModal] = useState(false);
-  const [bulkText, setBulkText] = useState('');
-  const [error, setError] = useState('');
-  const [query, setQuery] = useState('');
+  const [bulkText, setBulkText] = useState("");
+  const [error, setError] = useState("");
+  const [query, setQuery] = useState("");
   const [sidebar, setSidebar] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(false);
@@ -105,6 +130,12 @@ ${err.message}`)
   const [current, setCurrent] = useState(0);
   const [player, setPlayer] = useState(null);
   const [isAdding, setIsAdding] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [syncProgress, setSyncProgress] = useState({
+    done: 0,
+    total: 0,
+    label: "",
+  });
 
   // Theo dõi có thêm/xóa video trong phiên hiện tại hay không
   const [hasListModified, setHasListModified] = useState(false);
@@ -134,8 +165,9 @@ ${err.message}`)
         setIsFullscreen(false);
       }
     };
-    document.addEventListener('fullscreenchange', handleFullscreenChange);
-    return () => document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () =>
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
   }, []);
 
   // Khởi tạo YouTube Player.
@@ -156,7 +188,7 @@ ${err.message}`)
 
       const videoId = active.id;
 
-      instance = new window.YT.Player('yt-player', {
+      instance = new window.YT.Player("yt-player", {
         videoId,
         playerVars: {
           autoplay: 1,
@@ -165,7 +197,7 @@ ${err.message}`)
           modestbranding: 1,
           playsinline: 1,
           iv_load_policy: 3,
-          fs: 0
+          fs: 0,
         },
         events: {
           onReady: (e) => {
@@ -177,21 +209,16 @@ ${err.message}`)
             setDuration(ytPlayer.getDuration() || 0);
             setMuted(ytPlayer.isMuted?.() || false);
 
-            const realTitle = ytPlayer
-              .getVideoData()
-              ?.title
-              ?.trim();
+            const realTitle = ytPlayer.getVideoData()?.title?.trim();
 
             if (realTitle) {
-              setActive(prev =>
-                prev?.id === videoId
-                  ? { ...prev, title: realTitle }
-                  : prev
+              setActive((prev) =>
+                prev?.id === videoId ? { ...prev, title: realTitle } : prev,
               );
 
-              if (videosRef.current.some(v => v.id === videoId)) {
-                const updated = videosRef.current.map(v =>
-                  v.id === videoId ? { ...v, title: realTitle } : v
+              if (videosRef.current.some((v) => v.id === videoId)) {
+                const updated = videosRef.current.map((v) =>
+                  v.id === videoId ? { ...v, title: realTitle } : v,
                 );
                 videosRef.current = updated;
                 setVideos(updated);
@@ -205,9 +232,7 @@ ${err.message}`)
           onStateChange: (e) => {
             const state = e.data;
 
-            setPlaying(
-              state === window.YT.PlayerState.PLAYING
-            );
+            setPlaying(state === window.YT.PlayerState.PLAYING);
 
             if (state === window.YT.PlayerState.ENDED) {
               if (repeatRef.current) {
@@ -217,12 +242,12 @@ ${err.message}`)
               }
 
               const available = videosRef.current.filter(
-                v => v.id !== videoId
+                (v) => v.id !== videoId,
               );
 
               if (available.length > 0) {
                 const randomIndex = Math.floor(
-                  Math.random() * available.length
+                  Math.random() * available.length,
                 );
 
                 setActive(available[randomIndex]);
@@ -231,18 +256,18 @@ ${err.message}`)
                 e.target.playVideo();
               }
             }
-          }
-        }
+          },
+        },
       });
     };
 
     if (window.YT?.Player) {
       createPlayer();
     } else {
-      if (!document.querySelector('script[data-youtube-api]')) {
-        const script = document.createElement('script');
-        script.src = 'https://www.youtube.com/iframe_api';
-        script.dataset.youtubeApi = '1';
+      if (!document.querySelector("script[data-youtube-api]")) {
+        const script = document.createElement("script");
+        script.src = "https://www.youtube.com/iframe_api";
+        script.dataset.youtubeApi = "1";
         document.body.appendChild(script);
       }
 
@@ -279,16 +304,17 @@ ${err.message}`)
   // Phím tắt Space: phát / tạm dừng.
   useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.code !== 'Space' || e.repeat || !active || !player)
-        return;
+      if (e.code !== "Space" || e.repeat || !active || !player) return;
 
       const target = e.target;
       const tag = target?.tagName?.toLowerCase();
 
       if (
-        ['input', 'textarea', 'select', 'button', 'a'].includes(tag) ||
+        ["input", "textarea", "select", "button", "a"].includes(tag) ||
         target?.isContentEditable ||
-        e.ctrlKey || e.altKey || e.metaKey
+        e.ctrlKey ||
+        e.altKey ||
+        e.metaKey
       ) {
         return;
       }
@@ -302,10 +328,10 @@ ${err.message}`)
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener("keydown", handleKeyDown);
     };
   }, [active?.id, player, playing]);
 
@@ -325,11 +351,11 @@ ${err.message}`)
   // Ghi nội dung vào FileSystemFileHandle (dùng khi lưu đè lên file JSON đã restore)
   const writeToHandle = async (handle, content) => {
     if (handle.queryPermission) {
-      const perm = await handle.queryPermission({ mode: 'readwrite' });
-      if (perm !== 'granted' && handle.requestPermission) {
-        const req = await handle.requestPermission({ mode: 'readwrite' });
-        if (req !== 'granted') {
-          throw new Error('Không được cấp quyền ghi file.');
+      const perm = await handle.queryPermission({ mode: "readwrite" });
+      if (perm !== "granted" && handle.requestPermission) {
+        const req = await handle.requestPermission({ mode: "readwrite" });
+        if (req !== "granted") {
+          throw new Error("Không được cấp quyền ghi file.");
         }
       }
     }
@@ -343,7 +369,7 @@ ${err.message}`)
   const handleCloseVideo = async () => {
     if (hasListModified) {
       const shouldSave = window.confirm(
-        'Danh sách video đã có thay đổi (thêm/xóa). Bạn có muốn lưu thay đổi vào file JSON đã tải lên không?'
+        "Danh sách video đã có thay đổi (thêm/xóa). Bạn có muốn lưu thay đổi vào file JSON đã tải lên không?",
       );
 
       if (shouldSave) {
@@ -353,35 +379,35 @@ ${err.message}`)
           if (restoredFileHandleRef.current) {
             await writeToHandle(restoredFileHandleRef.current, payload);
             setHasListModified(false);
-            window.alert('Đã lưu đè thay đổi vào file JSON.');
-          } else if (typeof window.showSaveFilePicker === 'function') {
+            window.alert("Đã lưu đè thay đổi vào file JSON.");
+          } else if (typeof window.showSaveFilePicker === "function") {
             const date = new Date()
               .toISOString()
               .slice(0, 10)
-              .replace(/-/g, '');
+              .replace(/-/g, "");
 
             const handle = await window.showSaveFilePicker({
               suggestedName: `peach-videos-backup-${date}.json`,
               types: [
                 {
-                  description: 'JSON Files',
-                  accept: { 'application/json': ['.json'] }
-                }
-              ]
+                  description: "JSON Files",
+                  accept: { "application/json": [".json"] },
+                },
+              ],
             });
 
             restoredFileHandleRef.current = handle;
             await writeToHandle(handle, payload);
             setHasListModified(false);
-            window.alert('Đã lưu danh sách vào file JSON.');
+            window.alert("Đã lưu danh sách vào file JSON.");
           } else {
-            const blob = new Blob([payload], { type: 'application/json' });
+            const blob = new Blob([payload], { type: "application/json" });
             const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
+            const link = document.createElement("a");
             const date = new Date()
               .toISOString()
               .slice(0, 10)
-              .replace(/-/g, '');
+              .replace(/-/g, "");
 
             link.href = url;
             link.download = `peach-videos-backup-${date}.json`;
@@ -392,9 +418,9 @@ ${err.message}`)
             setHasListModified(false);
           }
         } catch (err) {
-          if (err?.name !== 'AbortError') {
+          if (err?.name !== "AbortError") {
             window.alert(
-              `Không thể lưu file JSON.\n${err.message || 'Đã xảy ra lỗi.'}`
+              `Không thể lưu file JSON.\n${err.message || "Đã xảy ra lỗi."}`,
             );
           }
         }
@@ -408,18 +434,18 @@ ${err.message}`)
   const addVideosFromText = async (text) => {
     const lines = text
       .split(/\r?\n/)
-      .map(line => line.trim())
+      .map((line) => line.trim())
       .filter(Boolean);
 
     if (lines.length === 0) {
-      setError('Vui lòng nhập danh sách video.');
+      setError("Vui lòng nhập danh sách video.");
       return;
     }
 
     const validIds = [];
     const invalid = [];
 
-    lines.forEach(line => {
+    lines.forEach((line) => {
       const id = getVideoId(line);
 
       if (id) {
@@ -432,23 +458,23 @@ ${err.message}`)
     });
 
     if (validIds.length === 0) {
-      setError('Không tìm thấy URL hoặc ID YouTube hợp lệ.');
+      setError("Không tìm thấy URL hoặc ID YouTube hợp lệ.");
       return;
     }
 
     setIsAdding(true);
-    setError('Đang lấy tiêu đề video từ YouTube...');
+    setError("Đang lấy tiêu đề video từ YouTube...");
 
     const existing = videosRef.current;
-    const knownIds = new Set(existing.map(v => v.id));
-    const newIdsToAdd = validIds.filter(id => !knownIds.has(id));
+    const knownIds = new Set(existing.map((v) => v.id));
+    const newIdsToAdd = validIds.filter((id) => !knownIds.has(id));
 
     const fetchedPromises = newIdsToAdd.map(async (id, index) => {
       const realTitle = await fetchYouTubeTitle(id);
       return {
         id,
         title: realTitle || `Video YouTube · ${id}`,
-        added: Date.now() + index
+        added: Date.now() + index,
       };
     });
 
@@ -466,8 +492,8 @@ ${err.message}`)
 
     const firstId = validIds[0];
     const firstVideo =
-      addedVideos.find(v => v.id === firstId) ||
-      existing.find(v => v.id === firstId);
+      addedVideos.find((v) => v.id === firstId) ||
+      existing.find((v) => v.id === firstId);
 
     if (firstVideo && !active) {
       setActive(firstVideo);
@@ -476,12 +502,14 @@ ${err.message}`)
     const duplicateCount = validIds.length - newIdsToAdd.length;
     const message = [
       `Đã thêm ${addedVideos.length} video mới.`,
-      duplicateCount > 0 ? `Bỏ qua ${duplicateCount} video trùng.` : '',
-      invalid.length > 0 ? `${invalid.length} dòng không hợp lệ.` : ''
-    ].filter(Boolean).join(' ');
+      duplicateCount > 0 ? `Bỏ qua ${duplicateCount} video trùng.` : "",
+      invalid.length > 0 ? `${invalid.length} dòng không hợp lệ.` : "",
+    ]
+      .filter(Boolean)
+      .join(" ");
 
-    setError('');
-    setBulkText('');
+    setError("");
+    setBulkText("");
     setModal(false);
 
     if (invalid.length > 0 || duplicateCount > 0) {
@@ -502,45 +530,30 @@ ${err.message}`)
     try {
       const text = await file.text();
       setBulkText(text);
-      setError('');
+      setError("");
     } catch {
-      setError('Không thể đọc file TXT.');
+      setError("Không thể đọc file TXT.");
     }
 
-    e.target.value = '';
+    e.target.value = "";
   };
 
-  // Backup: hỏi nơi lưu và cho phép đổi tên file JSON trên máy
+  // Backup: tải file JSON về thư mục Downloads
   const backupVideos = async () => {
-    const payload = createBackupPayload(videosRef.current);
-    const date = new Date()
-      .toISOString()
-      .slice(0, 10)
-      .replace(/-/g, '');
-    const defaultName = `peach-videos-backup-${date}.json`;
-
-    try {
-      if (typeof window.showSaveFilePicker === 'function') {
-        const handle = await window.showSaveFilePicker({
-          suggestedName: defaultName,
-          types: [
-            {
-              description: 'JSON Files',
-              accept: { 'application/json': ['.json'] }
-            }
-          ]
-        });
-
-        await writeToHandle(handle, payload);
-        return;
-      }
-    } catch (err) {
-      if (err?.name === 'AbortError') return;
+    if (!videosRef.current.length) {
+      window.alert(
+        "Danh sách video đang trống nên không có gì để backup. Kiểm tra lại kết nối MockAPI.",
+      );
+      return;
     }
 
-    const blob = new Blob([payload], { type: 'application/json' });
+    const payload = createBackupPayload(videosRef.current);
+    const date = new Date().toISOString().slice(0, 10).replace(/-/g, "");
+    const defaultName = `peach-videos-backup-${date}.json`;
+
+    const blob = new Blob([payload], { type: "application/json" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = url;
     link.download = defaultName;
     document.body.appendChild(link);
@@ -550,19 +563,20 @@ ${err.message}`)
   };
 
   // Xử lý nội dung JSON và thay thế hoàn toàn danh sách hiện tại (không gộp ngôn ngữ khác)
-  const applyRestoredJsonText = (text) => {
+  const applyRestoredJsonText = async (text) => {
+    console.log("[Restore] Đã đọc file, độ dài:", text.length, "ký tự");
     const data = JSON.parse(text);
     const imported = Array.isArray(data) ? data : data.videos;
 
     if (!Array.isArray(imported)) {
-      throw new Error('File không chứa danh sách video hợp lệ.');
+      throw new Error("File không chứa danh sách video hợp lệ.");
     }
 
     const seenIds = new Set();
     const replacedList = [];
 
-    imported.forEach(item => {
-      if (!item || typeof item !== 'object') return;
+    imported.forEach((item) => {
+      if (!item || typeof item !== "object") return;
 
       const id = getVideoId(item.id || item.url);
       if (!id || seenIds.has(id)) return;
@@ -572,86 +586,127 @@ ${err.message}`)
       replacedList.push({
         id,
         title:
-          typeof item.title === 'string' && item.title.trim()
+          typeof item.title === "string" && item.title.trim()
             ? item.title.trim()
             : `Video YouTube · ${id}`,
-        added: Number(item.added) || Date.now()
+        added: Number(item.added) || Date.now(),
       });
     });
 
+    console.log(
+      `[Restore] Trong file: ${imported.length} mục, hợp lệ: ${replacedList.length}, bỏ qua: ${imported.length - replacedList.length}`,
+    );
+
     videosRef.current = replacedList;
     setVideos(replacedList);
-    persist(replacedList);
     setActive(null);
     setHasListModified(false);
 
+    setIsSyncing(true);
+    setSyncProgress({ done: 0, total: 0, label: "Đang khôi phục dữ liệu" });
+    console.log("[Restore] Bắt đầu lưu lên MockAPI...");
+    const startedAt = Date.now();
+    try {
+      await saveVideos(replacedList, (done, total) =>
+        setSyncProgress({ done, total, label: "Đang khôi phục dữ liệu" }),
+      );
+      console.log(`[Restore] Lưu MockAPI xong sau ${Date.now() - startedAt}ms`);
+    } catch (err) {
+      console.error("[Restore] Lưu MockAPI thất bại:", err);
+      window.alert(
+        `Đã hiển thị ${replacedList.length} video từ file JSON nhưng không lưu được lên MockAPI.\n${err.message}`,
+      );
+      return;
+    } finally {
+      setIsSyncing(false);
+    }
+
     window.alert(
       `Khôi phục thành công!\n` +
-      `Đã hiển thị ${replacedList.length} video từ file JSON.`
+        `Đã ghi đè dữ liệu cũ bằng ${replacedList.length} video từ file JSON và lưu lên MockAPI.`,
     );
   };
 
-  // Mở hộp thoại chọn file JSON (ưu tiên showOpenFilePicker để giữ handle ghi đè)
-  const triggerRestoreJson = async () => {
-    if (typeof window.showOpenFilePicker === 'function') {
-      try {
-        const [handle] = await window.showOpenFilePicker({
-          multiple: false,
-          types: [
-            {
-              description: 'JSON Files',
-              accept: { 'application/json': ['.json'] }
-            }
-          ]
-        });
-
-        if (!handle) return;
-        restoredFileHandleRef.current = handle;
-        const file = await handle.getFile();
-        const text = await file.text();
-        applyRestoredJsonText(text);
-        return;
-      } catch (err) {
-        if (err?.name === 'AbortError') return;
-      }
-    }
-
+  // Mở hộp thoại chọn file JSON bằng input file thông thường
+  const triggerRestoreJson = () => {
+    console.log("[Restore] Click nút Restore, mở hộp chọn file");
     restoredFileHandleRef.current = null;
     restoreInputRef.current?.click();
   };
 
+  const deleteAllVideos = async () => {
+    if (!videosRef.current.length) {
+      window.alert("Danh sách video đang trống.");
+      return;
+    }
+
+    const ok = window.confirm(
+      `Xóa toàn bộ ${videosRef.current.length} video?\nDữ liệu trên MockAPI cũng sẽ bị xóa. Hãy Backup trước nếu cần.`,
+    );
+    if (!ok) return;
+
+    const previous = videosRef.current;
+
+    setIsSyncing(true);
+    setSyncProgress({ done: 0, total: 0, label: "Đang xóa dữ liệu" });
+    try {
+      await saveVideos([], (done, total) =>
+        setSyncProgress({ done, total, label: "Đang xóa dữ liệu" }),
+      );
+    } catch (err) {
+      window.alert(`Không thể xóa dữ liệu trên MockAPI.\n${err.message}`);
+      return;
+    } finally {
+      setIsSyncing(false);
+    }
+
+    videosRef.current = [];
+    setVideos([]);
+    setActive(null);
+    setHasListModified(false);
+    restoredFileHandleRef.current = null;
+    window.alert(`Đã xóa ${previous.length} video.`);
+  };
+
   const restoreVideos = async (e) => {
     const file = e.target.files?.[0];
-    if (!file) return;
+    if (!file) {
+      console.log("[Restore] Input file: chưa chọn file nào");
+      return;
+    }
+    console.log("[Restore] Đã chọn file (input):", file.name);
 
     try {
       restoredFileHandleRef.current = null;
       const text = await file.text();
-      applyRestoredJsonText(text);
+      await applyRestoredJsonText(text);
     } catch (err) {
+      console.error("[Restore] Lỗi:", err);
       window.alert(
-        `Không thể khôi phục dữ liệu.\n${err.message || 'File JSON không hợp lệ.'}`
+        `Không thể khôi phục dữ liệu.\n${err.message || "File JSON không hợp lệ."}`,
       );
     }
 
-    e.target.value = '';
+    e.target.value = "";
   };
 
   const filtered = useMemo(
-    () => videos.filter(v =>
-      v.title.toLowerCase().includes(query.toLowerCase()) ||
-      v.id.includes(query)
-    ),
-    [videos, query]
+    () =>
+      videos.filter(
+        (v) =>
+          v.title.toLowerCase().includes(query.toLowerCase()) ||
+          v.id.includes(query),
+      ),
+    [videos, query],
   );
 
   const recommendations = useMemo(
-    () => filtered.filter(v => v.id !== active?.id),
-    [filtered, active?.id]
+    () => filtered.filter((v) => v.id !== active?.id),
+    [filtered, active?.id],
   );
 
   const fmt = (n) =>
-    `${Math.floor(n / 60)}:${String(Math.floor(n % 60)).padStart(2, '0')}`;
+    `${Math.floor(n / 60)}:${String(Math.floor(n % 60)).padStart(2, "0")}`;
 
   const seek = (e) => {
     const t = Number(e.target.value);
@@ -660,17 +715,17 @@ ${err.message}`)
   };
 
   const remove = (id) => {
-    const video = videosRef.current.find(v => v.id === id);
+    const video = videosRef.current.find((v) => v.id === id);
 
     if (!video) return;
 
     const confirmed = window.confirm(
-      `Bạn có chắc muốn xóa video này không?\n\n${video.title}`
+      `Bạn có chắc muốn xóa video này không?\n\n${video.title}`,
     );
 
     if (!confirmed) return;
 
-    const updated = videosRef.current.filter(v => v.id !== id);
+    const updated = videosRef.current.filter((v) => v.id !== id);
 
     videosRef.current = updated;
     setVideos(updated);
@@ -692,22 +747,53 @@ ${err.message}`)
     }
   };
 
-
   return (
     <div className="app">
+      {isSyncing && (
+        <div className="sync-overlay" role="status" aria-live="polite">
+          <div className="sync-box">
+            <div className="sync-spinner" />
+            <strong>{syncProgress.label}...</strong>
+            {syncProgress.total > 0 && (
+              <>
+                <div className="sync-bar">
+                  <div
+                    className="sync-bar-fill"
+                    style={{
+                      width: `${(syncProgress.done / syncProgress.total) * 100}%`,
+                    }}
+                  />
+                </div>
+                <span>
+                  {syncProgress.done}/{syncProgress.total}
+                </span>
+              </>
+            )}
+            <small>Vui lòng không đóng tab.</small>
+          </div>
+        </div>
+      )}
 
       <header className="topbar">
         <div className="brand-area">
-          <button
-            className="icon-btn"
-            onClick={() => setSidebar(!sidebar)}
-          >
+          <button className="icon-btn" onClick={() => setSidebar(!sidebar)}>
             <Menu />
           </button>
 
           <div className="brand">
-            <svg xmlns="http://www.w3.org/2000/svg" width="93" height="20" viewBox="0 0 93 20" focusable="false" aria-label="YouTube" style={{ display: 'block', fill: 'currentcolor' }}>
-              <path d="M14.4848 20C14.4848 20 23.5695 20 25.8229 19.4C27.0917 19.06 28.0459 18.08 28.3808 16.87C29 14.65 29 9.98 29 9.98C29 9.98 29 5.34 28.3808 3.14C28.0459 1.9 27.0917 0.94 25.8229 0.61C23.5695 0 14.4848 0 14.4848 0C14.4848 0 5.42037 0 3.17711 0.61C1.9286 0.94 0.954148 1.9 0.59888 3.14C0 5.34 0 9.98 0 9.98C0 9.98 0 14.65 0.59888 16.87C0.954148 18.08 1.9286 19.06 3.17711 19.4C5.42037 20 14.4848 20 14.4848 20Z" fill="#FF0033" />
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              width="93"
+              height="20"
+              viewBox="0 0 93 20"
+              focusable="false"
+              aria-label="YouTube"
+              style={{ display: "block", fill: "currentcolor" }}
+            >
+              <path
+                d="M14.4848 20C14.4848 20 23.5695 20 25.8229 19.4C27.0917 19.06 28.0459 18.08 28.3808 16.87C29 14.65 29 9.98 29 9.98C29 9.98 29 5.34 28.3808 3.14C28.0459 1.9 27.0917 0.94 25.8229 0.61C23.5695 0 14.4848 0 14.4848 0C14.4848 0 5.42037 0 3.17711 0.61C1.9286 0.94 0.954148 1.9 0.59888 3.14C0 5.34 0 9.98 0 9.98C0 9.98 0 14.65 0.59888 16.87C0.954148 18.08 1.9286 19.06 3.17711 19.4C5.42037 20 14.4848 20 14.4848 20Z"
+                fill="#FF0033"
+              />
               <path d="M19 10L11.5 5.75V14.25L19 10Z" fill="white" />
               <path d="M37.1384 18.8999V13.4399L40.6084 2.09994H38.0184L36.6984 7.24994C36.3984 8.42994 36.1284 9.65994 35.9284 10.7999H35.7684C35.6584 9.79994 35.3384 8.48994 35.0184 7.22994L33.7384 2.09994H31.1484L34.5684 13.4399V18.8999H37.1384Z" />
               <path d="M44.1003 6.29994C41.0703 6.29994 40.0303 8.04994 40.0303 11.8199V13.6099C40.0303 16.9899 40.6803 19.1099 44.0403 19.1099C47.3503 19.1099 48.0603 17.0899 48.0603 13.6099V11.8199C48.0603 8.44994 47.3803 6.29994 44.1003 6.29994ZM45.3903 14.7199C45.3903 16.3599 45.1003 17.3899 44.0503 17.3899C43.0203 17.3899 42.7303 16.3499 42.7303 14.7199V10.6799C42.7303 9.27994 42.9303 8.02994 44.0503 8.02994C45.2303 8.02994 45.3903 9.34994 45.3903 10.6799V14.7199Z" />
@@ -722,13 +808,10 @@ ${err.message}`)
         </div>
 
         <div className="search-area">
-          <form
-            className="search-box"
-            onSubmit={e => e.preventDefault()}
-          >
+          <form className="search-box" onSubmit={(e) => e.preventDefault()}>
             <input
               value={query}
-              onChange={e => setQuery(e.target.value)}
+              onChange={(e) => setQuery(e.target.value)}
               placeholder="Tìm kiếm"
             />
             <button type="submit" aria-label="Tìm kiếm">
@@ -739,7 +822,7 @@ ${err.message}`)
           <button
             className="add-video"
             onClick={() => {
-              setError('');
+              setError("");
               setModal(true);
             }}
             title="Thêm video"
@@ -760,11 +843,22 @@ ${err.message}`)
           <button
             className="header-tool"
             onClick={triggerRestoreJson}
+            disabled={isSyncing}
             title="Restore dữ liệu"
           >
             <Upload />
-            <span>Restore</span>
+            <span>{isSyncing ? "Đang lưu..." : "Restore"}</span>
           </button>
+
+          {/* <button
+            className="header-tool"
+            onClick={deleteAllVideos}
+            disabled={isSyncing}
+            title="Xóa toàn bộ dữ liệu"
+          >
+            <Trash2 />
+            <span>Delete all</span>
+          </button> */}
 
           <input
             ref={restoreInputRef}
@@ -789,7 +883,7 @@ ${err.message}`)
         </div>
       </header>
 
-      <aside className={`sidebar ${sidebar ? '' : 'collapsed'}`}>
+      <aside className={`sidebar ${sidebar ? "" : "collapsed"}`}>
         <Nav icon={<House />} label="Home" active />
         <Nav icon={<Compass />} label="Explore" />
         <Nav icon={<Tv />} label="Subscriptions" />
@@ -804,17 +898,11 @@ ${err.message}`)
         <Nav icon={<ThumbsUp />} label="Liked videos" />
       </aside>
 
-      <main className={`main ${sidebar ? '' : 'wide'}`}>
-
+      <main className={`main ${sidebar ? "" : "wide"}`}>
         {active && (
           <div className="watch-layout">
-
             <section className="watch-view">
-
-              <div
-                ref={playerShellRef}
-                className="player-shell"
-              >
+              <div ref={playerShellRef} className="player-shell">
                 <div id="yt-player"></div>
 
                 <div className="player-click-shield"></div>
@@ -830,9 +918,7 @@ ${err.message}`)
                   <button
                     onClick={() => {
                       if (!player) return;
-                      playing
-                        ? player.pauseVideo()
-                        : player.playVideo();
+                      playing ? player.pauseVideo() : player.playVideo();
                     }}
                     title="Phát / Tạm dừng (Space)"
                   >
@@ -853,21 +939,21 @@ ${err.message}`)
                   />
 
                   <button
-                    className={`repeat-btn ${repeat ? 'active' : ''}`}
-                    onClick={() => setRepeat(v => !v)}
-                    title={repeat ? 'Tắt lặp video' : 'Lặp video hiện tại'}
+                    className={`repeat-btn ${repeat ? "active" : ""}`}
+                    onClick={() => setRepeat((v) => !v)}
+                    title={repeat ? "Tắt lặp video" : "Lặp video hiện tại"}
                   >
                     <Repeat size={18} />
                   </button>
 
-                  <button onClick={toggleMute} title={muted ? "Bật âm thanh" : "Tắt âm thanh"}>
+                  <button
+                    onClick={toggleMute}
+                    title={muted ? "Bật âm thanh" : "Tắt âm thanh"}
+                  >
                     {muted ? <VolumeX size={18} /> : <Volume2 size={18} />}
                   </button>
 
-                  <button
-                    onClick={toggleFullscreen}
-                    title="Toàn màn hình"
-                  >
+                  <button onClick={toggleFullscreen} title="Toàn màn hình">
                     <Maximize size={18} />
                   </button>
                 </div>
@@ -889,16 +975,14 @@ ${err.message}`)
                   <Repeat size={14} /> Đang bật lặp video hiện tại
                 </p>
               )}
-
             </section>
 
             <aside className="recommendations">
               <h3>Video tiếp theo</h3>
 
               {recommendations.length > 0 ? (
-                recommendations.map(v => (
+                recommendations.map((v) => (
                   <article className="recommendation-card" key={v.id}>
-
                     <button
                       className="recommendation-thumb"
                       onClick={() => setActive(v)}
@@ -924,7 +1008,6 @@ ${err.message}`)
                     >
                       <MoreVertical />
                     </button>
-
                   </article>
                 ))
               ) : (
@@ -933,7 +1016,6 @@ ${err.message}`)
                 </p>
               )}
             </aside>
-
           </div>
         )}
 
@@ -945,12 +1027,9 @@ ${err.message}`)
             </div>
 
             <div className="video-grid">
-              {filtered.map(v => (
+              {filtered.map((v) => (
                 <article className="video-card" key={v.id}>
-                  <button
-                    className="thumb"
-                    onClick={() => setActive(v)}
-                  >
+                  <button className="thumb" onClick={() => setActive(v)}>
                     <img
                       src={`https://i.ytimg.com/vi/${v.id}/hqdefault.jpg`}
                       alt=""
@@ -979,25 +1058,21 @@ ${err.message}`)
             </div>
 
             {filtered.length === 0 && (
-              <p className="no-results">
-                Không tìm thấy video phù hợp.
-              </p>
+              <p className="no-results">Không tìm thấy video phù hợp.</p>
             )}
           </section>
         )}
-
       </main>
 
       {/* HỘP THÊM NHIỀU VIDEO */}
       {modal && (
         <div
           className="overlay"
-          onMouseDown={e =>
+          onMouseDown={(e) =>
             e.target === e.currentTarget && !isAdding && setModal(false)
           }
         >
           <form className="dialog bulk-dialog" onSubmit={addVideo}>
-
             <div className="dialog-head">
               <h2>Thêm video YouTube</h2>
               <button
@@ -1019,14 +1094,14 @@ ${err.message}`)
               autoFocus
               disabled={isAdding}
               value={bulkText}
-              onChange={e => {
+              onChange={(e) => {
                 setBulkText(e.target.value);
-                setError('');
+                setError("");
               }}
               placeholder={
-                'https://www.youtube.com/watch?v=VIDEO_ID_1\n' +
-                'https://youtu.be/VIDEO_ID_2\n' +
-                'VIDEO_ID_3'
+                "https://www.youtube.com/watch?v=VIDEO_ID_1\n" +
+                "https://youtu.be/VIDEO_ID_2\n" +
+                "VIDEO_ID_3"
               }
               rows={7}
             />
@@ -1056,7 +1131,11 @@ ${err.message}`)
               <span>File TXT sẽ được đưa vào ô nhập phía trên.</span>
             </div>
 
-            {error && <p className={`error ${isAdding ? 'loading-text' : ''}`}>{error}</p>}
+            {error && (
+              <p className={`error ${isAdding ? "loading-text" : ""}`}>
+                {error}
+              </p>
+            )}
 
             <div className="dialog-actions">
               <button
@@ -1069,25 +1148,23 @@ ${err.message}`)
               </button>
 
               <button className="primary" type="submit" disabled={isAdding}>
-                <Plus size={17} /> {isAdding ? 'Đang thêm...' : 'Thêm video'}
+                <Plus size={17} /> {isAdding ? "Đang thêm..." : "Thêm video"}
               </button>
             </div>
-
           </form>
         </div>
       )}
-
     </div>
   );
 }
 
 function Nav({ icon, label, active }) {
   return (
-    <button className={`nav-item ${active ? 'selected' : ''}`}>
+    <button className={`nav-item ${active ? "selected" : ""}`}>
       <span>{icon}</span>
       <small>{label}</small>
     </button>
   );
 }
 
-createRoot(document.getElementById('root')).render(<App />);
+createRoot(document.getElementById("root")).render(<App />);

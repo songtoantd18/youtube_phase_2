@@ -8,7 +8,9 @@ async function request(url, options) {
     headers: { 'Content-Type': 'application/json' },
     ...options
   });
-  if (!res.ok) throw new Error(`MockAPI lỗi ${res.status}`);
+  const method = options?.method || 'GET';
+  if (res.status === 404 && (method === 'GET' || method === 'DELETE')) return null;
+  if (!res.ok) throw new Error(`MockAPI lỗi ${res.status}\n${options?.method || 'GET'} ${url}`);
   return res.json();
 }
 
@@ -24,7 +26,7 @@ export async function getVideos() {
 }
 
 // Đồng bộ danh sách hiện tại lên MockAPI: xóa bản ghi thừa, thêm mới, cập nhật tiêu đề đổi.
-export async function saveVideos(list) {
+export async function saveVideos(list, onProgress) {
   const records = await fetchRecords();
   const byVideoId = new Map(records.map(r => [r.videoId, r]));
   const wanted = new Set(list.map(v => v.id));
@@ -32,7 +34,7 @@ export async function saveVideos(list) {
 
   for (const r of records) {
     if (!wanted.has(r.videoId)) {
-      jobs.push(request(`${VIDEOS}/${r.id}`, { method: 'DELETE' }));
+      jobs.push(() => request(`${VIDEOS}/${r.id}`, { method: 'DELETE' }));
     }
   }
 
@@ -40,11 +42,21 @@ export async function saveVideos(list) {
     const body = JSON.stringify({ videoId: v.id, title: v.title, added: v.added });
     const existing = byVideoId.get(v.id);
     if (!existing) {
-      jobs.push(request(VIDEOS, { method: 'POST', body }));
+      jobs.push(() => request(VIDEOS, { method: 'POST', body }));
     } else if (existing.title !== v.title || Number(existing.added) !== v.added) {
-      jobs.push(request(`${VIDEOS}/${existing.id}`, { method: 'PUT', body }));
+      jobs.push(() => request(`${VIDEOS}/${existing.id}`, { method: 'PUT', body }));
     }
   }
 
-  await Promise.all(jobs);
+  console.log(`[saveVideos] Hiện có ${records.length} bản ghi trên API, cần thực hiện ${jobs.length} thao tác`);
+
+  // Chạy lần lượt để tránh MockAPI từ chối khi nhận quá nhiều request cùng lúc.
+  let done = 0;
+  onProgress?.(0, jobs.length);
+  for (const job of jobs) {
+    await job();
+    done += 1;
+    onProgress?.(done, jobs.length);
+    console.log(`[saveVideos] ${done}/${jobs.length}`);
+  }
 }
